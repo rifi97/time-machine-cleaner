@@ -7,6 +7,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            capacitySummary
             Divider()
             content
             Divider()
@@ -30,6 +31,31 @@ struct ContentView: View {
             Button("취소", role: .cancel) {}
         } message: {
             Text("삭제한 로컬 스냅샷은 복구할 수 없습니다. 외장 Time Machine 백업은 삭제되지 않습니다.")
+        }
+    }
+
+    @ViewBuilder
+    private var capacitySummary: some View {
+        if let capacity = model.diskCapacity {
+            VStack(spacing: 8) {
+                HStack {
+                    Label("내장 SSD", systemImage: "internaldrive")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text("\(DiskCapacity.formatted(bytes: capacity.availableBytes)) 사용 가능")
+                        .font(.subheadline.weight(.medium))
+                }
+                ProgressView(value: capacity.usedFraction)
+                HStack {
+                    Text("\(DiskCapacity.formatted(bytes: capacity.usedBytes)) 사용")
+                    Spacer()
+                    Text("전체 \(DiskCapacity.formatted(bytes: capacity.totalBytes))")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
         }
     }
 
@@ -124,6 +150,12 @@ struct ContentView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            if let summary = model.lastDeletionSummary {
+                Label(summary, systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+
             Spacer()
 
             if model.isWorking && !model.snapshots.isEmpty {
@@ -139,6 +171,12 @@ struct ContentView: View {
             .disabled(model.selectedSnapshots.isEmpty || model.isWorking)
         }
         .padding(16)
+        .overlay(alignment: .top) {
+            Text("APFS 공유 블록 특성상 삭제 전 스냅샷별 크기는 macOS에서 제공하지 않습니다.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .offset(y: -20)
+        }
     }
 
     private var errorAlertBinding: Binding<Bool> {

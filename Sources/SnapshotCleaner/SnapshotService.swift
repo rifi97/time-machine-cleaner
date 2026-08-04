@@ -10,6 +10,7 @@ enum SnapshotServiceError: LocalizedError {
     case commandFailed(String)
     case invalidSnapshotName
     case authorizationCancelled
+    case capacityUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -19,11 +20,31 @@ enum SnapshotServiceError: LocalizedError {
             return "안전하지 않은 스냅샷 이름이 감지되어 삭제를 중단했습니다."
         case .authorizationCancelled:
             return "관리자 인증이 취소되었습니다."
+        case .capacityUnavailable:
+            return "내장 디스크 용량 정보를 읽지 못했습니다."
         }
     }
 }
 
 struct SnapshotService: Sendable {
+    func diskCapacity() async throws -> DiskCapacity {
+        try await Task.detached(priority: .utility) {
+            let homeURL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+            let values = try homeURL.resourceValues(forKeys: [
+                .volumeTotalCapacityKey,
+                .volumeAvailableCapacityKey
+            ])
+            guard let total = values.volumeTotalCapacity,
+                  let available = values.volumeAvailableCapacity else {
+                throw SnapshotServiceError.capacityUnavailable
+            }
+            return DiskCapacity(
+                totalBytes: Int64(total),
+                availableBytes: Int64(available)
+            )
+        }.value
+    }
+
     func listSnapshots() async throws -> [LocalSnapshot] {
         let result = try await run(
             executable: "/usr/bin/tmutil",

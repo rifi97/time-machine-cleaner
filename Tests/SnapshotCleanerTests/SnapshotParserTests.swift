@@ -3,6 +3,14 @@ import Testing
 @testable import TimeMachineCleaner
 
 struct SnapshotParserTests {
+    @Test func calculatesDiskUsageAndFormatsCapacity() {
+        let capacity = DiskCapacity(totalBytes: 2_000_000_000, availableBytes: 750_000_000)
+
+        #expect(capacity.usedBytes == 1_250_000_000)
+        #expect(capacity.usedFraction == 0.625)
+        #expect(DiskCapacity.formatted(bytes: 1_000_000_000).contains("GB"))
+    }
+
     @Test func parsesOnlyTimeMachineLocalSnapshots() {
         let output = """
         Snapshots for disk /:

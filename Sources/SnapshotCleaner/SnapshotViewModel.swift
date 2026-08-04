@@ -4,9 +4,11 @@ import Foundation
 @MainActor
 final class SnapshotViewModel: ObservableObject {
     @Published private(set) var snapshots: [LocalSnapshot] = []
+    @Published private(set) var diskCapacity: DiskCapacity?
     @Published var selectedIDs: Set<LocalSnapshot.ID> = []
     @Published private(set) var isWorking = false
     @Published var alertMessage: String?
+    @Published private(set) var lastDeletionSummary: String?
 
     private let service = SnapshotService()
 
@@ -23,7 +25,10 @@ final class SnapshotViewModel: ObservableObject {
         defer { isWorking = false }
 
         do {
-            snapshots = try await service.listSnapshots()
+            async let loadedSnapshots = service.listSnapshots()
+            async let loadedCapacity = service.diskCapacity()
+            snapshots = try await loadedSnapshots
+            diskCapacity = try await loadedCapacity
             selectedIDs.formIntersection(Set(snapshots.map(\.id)))
         } catch {
             alertMessage = error.localizedDescription
@@ -50,9 +55,20 @@ final class SnapshotViewModel: ObservableObject {
         defer { isWorking = false }
 
         do {
+            let capacityBeforeDeletion = try? await service.diskCapacity()
             try await service.delete(targets)
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            let capacityAfterDeletion = try? await service.diskCapacity()
             selectedIDs.removeAll()
             snapshots = try await service.listSnapshots()
+            diskCapacity = capacityAfterDeletion
+
+            if let before = capacityBeforeDeletion, let after = capacityAfterDeletion {
+                let reclaimedBytes = max(0, after.availableBytes - before.availableBytes)
+                lastDeletionSummary = "\(targets.count)개 삭제 · 약 \(DiskCapacity.formatted(bytes: reclaimedBytes)) 확보"
+            } else {
+                lastDeletionSummary = "\(targets.count)개 스냅샷 삭제 완료"
+            }
         } catch SnapshotServiceError.authorizationCancelled {
             return
         } catch {
