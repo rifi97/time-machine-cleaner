@@ -88,10 +88,20 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(snapshot.formattedDate)
                                 .foregroundStyle(.primary)
-                            Text(snapshot.name)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(snapshot.name)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                if snapshot.isDataless {
+                                    Text("dataless")
+                                        .font(.caption2.weight(.medium))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(.secondary.opacity(0.12), in: Capsule())
+                                }
+                            }
                         }
                         Spacer()
                     }

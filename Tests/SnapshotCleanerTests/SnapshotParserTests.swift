@@ -32,4 +32,15 @@ struct SnapshotParserTests {
         #expect(snapshots.count == 1)
         #expect(snapshots.first?.deletionToken == "2026-08-04-123456")
     }
+
+    @Test func parsesDatalessSnapshotAnnotation() {
+        let snapshots = SnapshotParser.parse(
+            "com.apple.TimeMachine.2026-08-04-120336.local (dataless)"
+        )
+
+        #expect(snapshots.count == 1)
+        #expect(snapshots.first?.name == "com.apple.TimeMachine.2026-08-04-120336.local")
+        #expect(snapshots.first?.deletionToken == "2026-08-04-120336")
+        #expect(snapshots.first?.isDataless == true)
+    }
 }
